@@ -2,11 +2,13 @@ package main
 
 import (
 	"fmt"
-	"github.com/bwmarrin/discordgo"
 	"net/http"
 	"os"
 	"os/signal"
+	"regexp"
 	"syscall"
+
+	"github.com/bwmarrin/discordgo"
 )
 
 var (
@@ -45,6 +47,9 @@ type Gopher struct {
 	Name string `json: "name"`
 }
 
+// This regex will find the fliper emoji in chat
+var rgxFindFliper = regexp.MustCompile(`(<:fliper:(\d)*>)`)
+
 func messageCreate(s *discordgo.Session, m *discordgo.MessageCreate) {
 
 	// Ignore all messages created by the bot itself
@@ -53,8 +58,22 @@ func messageCreate(s *discordgo.Session, m *discordgo.MessageCreate) {
 		return
 	}
 
-	if m.Content == "healthy" {
-		s.ChannelMessageSend(m.ChannelID, "i am healthy!")
+	roles, _ := s.GuildRoles(m.GuildID)
+
+	var fliperRoleID string
+
+	for _, v := range roles {
+		if *&v.Name == "supremo" { // We'll need to change this to name of our role
+			fliperRoleID = *&v.ID
+		}
+	}
+
+	findEmoji := rgxFindFliper.FindStringSubmatch(m.Content)
+
+	if len(findEmoji) != 0 {
+		if len(findEmoji[1]) != 0 {
+			s.ChannelMessageSend(m.ChannelID, "Please enter at chat :) <@&"+fliperRoleID+">")
+		}
 	}
 
 	if m.Content == "gopher" {
