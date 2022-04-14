@@ -12,7 +12,7 @@ import (
 )
 
 var (
-	Token string = "OTYyODk0NTg2NjQzMTIwMTQ5.YlOLdw.axpaLo7MtgKskM8VvzhKA7oBJHI"
+	Token string = ""
 )
 
 const KuteGoAPIURL = "https://kutego-api-xxxxx-ew.a.run.app"
