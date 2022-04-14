@@ -50,7 +50,58 @@ type Gopher struct {
 // This regex will find the fliper emoji in chat
 var rgxFindFliper = regexp.MustCompile(`(<:fliper:(\d)*>)`)
 
+func getRoleByName(roleName string, s *discordgo.Session, m *discordgo.MessageCreate) (string, error) {
+	roles, err := s.GuildRoles(m.GuildID)
+
+	if err != nil {
+		return "", nil
+	}
+
+	var fliperRoleID string
+
+	for _, v := range roles {
+		if *&v.Name == roleName {
+			fliperRoleID = *&v.ID
+		}
+	}
+
+	if len(fliperRoleID) == 0 {
+		return "", fmt.Errorf("role %s not found", roleName)
+	}
+
+	return fliperRoleID, nil
+}
+
+func getChannelIDByName(chanName string, s *discordgo.Session, m *discordgo.MessageCreate) (string, error) {
+	channels, err := s.GuildChannels(m.GuildID)
+
+	if err != nil {
+		return "", err
+	}
+
+	var ChID string
+
+	for _, v := range channels {
+		if v.Name == chanName {
+			ChID = v.ID
+		}
+	}
+
+	if len(ChID) == 0 {
+		return "", fmt.Errorf("channel %s not found", chanName)
+	}
+
+	return ChID, nil
+
+}
+
 func messageCreate(s *discordgo.Session, m *discordgo.MessageCreate) {
+
+	targetChanId, err := getChannelIDByName("test_chan", s, m) // We'll need to change this to name of our target channel
+
+	if err != nil {
+		panic(err)
+	}
 
 	// Ignore all messages created by the bot itself
 	// This isn't required in this specific example but it's a good practice.
@@ -58,21 +109,17 @@ func messageCreate(s *discordgo.Session, m *discordgo.MessageCreate) {
 		return
 	}
 
-	roles, _ := s.GuildRoles(m.GuildID)
+	fliperRoleID, err := getRoleByName("supremo", s, m) // We'll need to change this to name of our role
 
-	var fliperRoleID string
-
-	for _, v := range roles {
-		if *&v.Name == "supremo" { // We'll need to change this to name of our role
-			fliperRoleID = *&v.ID
-		}
+	if err != nil {
+		panic(err)
 	}
 
 	findEmoji := rgxFindFliper.FindStringSubmatch(m.Content)
 
 	if len(findEmoji) != 0 {
 		if len(findEmoji[1]) != 0 {
-			s.ChannelMessageSend(m.ChannelID, "Please enter at chat :) <@&"+fliperRoleID+">")
+			s.ChannelMessageSend(targetChanId, "Please <@&"+fliperRoleID+">"+" enter at chat"+" \nThe user <@"+m.Author.ID+"> is calling you :)\n")
 		}
 	}
 
