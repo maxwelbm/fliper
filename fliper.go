@@ -1,19 +1,27 @@
 package main
 
 import (
+	"flag"
 	"fmt"
+	"math/rand"
 	"net/http"
 	"os"
 	"os/signal"
 	"regexp"
 	"syscall"
+	"time"
 
 	"github.com/bwmarrin/discordgo"
 )
 
 var (
-	Token string = ""
+	Token string
 )
+
+func init() {
+	flag.StringVar(&Token, "t", "", "Bot Token")
+	flag.Parse()
+}
 
 const KuteGoAPIURL = "https://kutego-api-xxxxx-ew.a.run.app"
 
@@ -50,8 +58,8 @@ type Gopher struct {
 // This regex will find the fliper emoji in chat
 var rgxFindFliper = regexp.MustCompile(`(<:fliper:(\d)*>)`)
 
-func getRoleByName(roleName string, s *discordgo.Session, m *discordgo.MessageCreate) (string, error) {
-	roles, err := s.GuildRoles(m.GuildID)
+func getRoleByName(roleName string, s *discordgo.Session, guildID string) (string, error) {
+	roles, err := s.GuildRoles(guildID)
 
 	if err != nil {
 		return "", nil
@@ -72,8 +80,8 @@ func getRoleByName(roleName string, s *discordgo.Session, m *discordgo.MessageCr
 	return fliperRoleID, nil
 }
 
-func getChannelIDByName(chanName string, s *discordgo.Session, m *discordgo.MessageCreate) (string, error) {
-	channels, err := s.GuildChannels(m.GuildID)
+func getChannelIDByName(chanName string, s *discordgo.Session, guildID string) (string, error) {
+	channels, err := s.GuildChannels(guildID)
 
 	if err != nil {
 		return "", err
@@ -97,7 +105,7 @@ func getChannelIDByName(chanName string, s *discordgo.Session, m *discordgo.Mess
 
 func messageCreate(s *discordgo.Session, m *discordgo.MessageCreate) {
 
-	targetChanId, err := getChannelIDByName("test_chan", s, m) // We'll need to change this to name of our target channel
+	targetChanId, err := getChannelIDByName("test_chan", s, m.GuildID) // We'll need to change this to name of our target channel
 
 	if err != nil {
 		panic(err)
@@ -109,7 +117,7 @@ func messageCreate(s *discordgo.Session, m *discordgo.MessageCreate) {
 		return
 	}
 
-	fliperRoleID, err := getRoleByName("supremo", s, m) // We'll need to change this to name of our role
+	fliperRoleID, err := getRoleByName("supremo", s, m.GuildID) // We'll need to change this to name of our role
 
 	if err != nil {
 		panic(err)
@@ -119,7 +127,7 @@ func messageCreate(s *discordgo.Session, m *discordgo.MessageCreate) {
 
 	if len(findEmoji) != 0 {
 		if len(findEmoji[1]) != 0 {
-			s.ChannelMessageSend(targetChanId, "Please <@&"+fliperRoleID+">"+" enter at chat"+" \nThe user <@"+m.Author.ID+"> is calling you :)\n")
+			s.ChannelMessageSend(targetChanId, genLines(m.Author.ID, fliperRoleID))
 		}
 	}
 
@@ -155,5 +163,32 @@ func messageCreate(s *discordgo.Session, m *discordgo.MessageCreate) {
 		} else {
 			fmt.Println("Error: Can't get random Gopher! :-(")
 		}
+	}
+
+}
+
+func genLines(callerID, roleID string) string {
+
+	rand.Seed(time.Now().UnixNano())
+
+	randNum := rand.Intn(10)
+
+	switch randNum {
+	case 0:
+		return "<@&" + roleID + "> " + "The user <@" + callerID + "> needs your help\n"
+	case 1:
+		return "Please Dungeon Master <@&" + roleID + ">" + ", thy knight Sir <@" + callerID + "> needs your help to win the battle against the TS!\n"
+	case 2:
+		return "<@&" + roleID + ">" + " HELP MEEE!!!" + " \n by: <@" + callerID + "> :)\n"
+	case 3:
+		return "Hey <@&" + roleID + ">" + " you are the guy!" + " \nPlease help <@" + callerID + "> to fly!\n"
+	case 4:
+		return "Hey <@&" + roleID + ">" + " !" + " \n2 minds think better than one <@" + callerID + "> ;)\n"
+	case 5:
+		return "<@&" + roleID + ">" + " .... " + " \nThe user <@" + callerID + "> has a question that only you know the answer\n"
+	case 6:
+		return "<@&" + roleID + ">" + " !" + "\nI ( <@" + callerID + "> ) choose you! \n"
+	default:
+		return "Please <@&" + roleID + ">" + " enter at chat" + " \nThe user <@" + callerID + "> is calling you :)\n"
 	}
 }
